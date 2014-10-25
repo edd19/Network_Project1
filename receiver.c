@@ -6,13 +6,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include "packet.h"
 
 int main(int argc, char**argv)
 {
    int sockfd,n;
    struct sockaddr_in servaddr,cliaddr;
    socklen_t len;
-   char mesg[1000];
+   char mesg[512];
+Packet p;
 
    sockfd=socket(AF_INET,SOCK_DGRAM,0);
 
@@ -25,8 +27,8 @@ int main(int argc, char**argv)
    for (;;)
    {
       len = sizeof(cliaddr);
-      n = recvfrom(sockfd,mesg,1000,0,(struct sockaddr *)&cliaddr,&len);
-      sendto(sockfd,mesg,n,0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+      n = recvfrom(sockfd, &p, sizeof(Packet), 0,(struct sockaddr *)&cliaddr,&len);
+      sendto(sockfd, &(p.payload),512,0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
       printf("-------------------------------------------------------\n");
       mesg[n] = 0;
       printf("Received the following:\n");
