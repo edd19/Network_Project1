@@ -1,39 +1,36 @@
+
+/* Sample UDP server */
+
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
 #include <string.h>
-#include <sys/types.h>
-#include <time.h> 
+#include <stdlib.h>
 
-int main(int argc, char *argv[])
+int main(int argc, char**argv)
 {
-  int listenfd = 0;
-    struct sockaddr_in6 serv_addr; 
+   int sockfd,n;
+   struct sockaddr_in servaddr,cliaddr;
+   socklen_t len;
+   char mesg[1000];
 
-    char sendBuff[1025];
-    time_t ticks; 
+   sockfd=socket(AF_INET,SOCK_DGRAM,0);
 
-    listenfd = socket(AF_INET, SOCK_STREAM, 0);
+   //bzero(&servaddr,sizeof(servaddr));
+   servaddr.sin_family = AF_INET;
+   servaddr.sin_addr.s_addr=htonl(INADDR_ANY);
+   servaddr.sin_port=htons(32000);
+   bind(sockfd,(struct sockaddr *)&servaddr,sizeof(servaddr));
 
-    serv_addr.sin6_family = AF_INET6;
-    serv_addr.sin6_port = htons(5000); 
-
-    if(inet_pton(AF_INET6, "::1", &serv_addr.sin6_addr)<=0) //transforme l'adresse IPv6 en binaire
-    {
-        printf("\n inet_pton error occured\n");
-        return 1;
-    } 
-
-    bind(listenfd, (struct sockaddr*)&serv_addr, sizeof(serv_addr)); 
-
-    listen(listenfd, 10); 
-    while(1) {
-    recvfrom(listenfd, sendBuff, sizeof(sendBuff), 0, (struct sockaddr *) &serv_addr, (socklen_t *)sizeof(serv_addr));
-    }
-
-    printf("%s", sendBuff);
+   for (;;)
+   {
+      len = sizeof(cliaddr);
+      n = recvfrom(sockfd,mesg,1000,0,(struct sockaddr *)&cliaddr,&len);
+      sendto(sockfd,mesg,n,0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+      printf("-------------------------------------------------------\n");
+      mesg[n] = 0;
+      printf("Received the following:\n");
+      printf("%s",mesg);
+      printf("-------------------------------------------------------\n");
+   }
 }
