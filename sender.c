@@ -9,37 +9,36 @@
 #include <errno.h>
 #include <arpa/inet.h> 
 
-int main(int argc, char *argv[])
-{
-    int sockfd = 0;
-    struct sockaddr_in6 serv_addr; 
+#define BUFLEN 512
+ #define NPACK 10
+#define PORT 9930
 
-    if((sockfd = socket(AF_INET6, SOCK_DGRAM, 17)) < 0) //cree la socket
-    {
-        printf("\n Error : Could not create socket \n");
-        return 1;
-    } 
-
-    serv_addr.sin6_family = AF_INET6; //type d'adresse : IPv6 
-    serv_addr.sin6_port = htons(5000); //transforme le port en equivalent binaire 
-
-    if(inet_pton(AF_INET6, "::1", &serv_addr.sin6_addr)<=0) //transforme l'adresse IPv6 en binaire
-    {
-        printf("\n inet_pton error occured\n");
-        return 1;
-    } 
-
+ #define SRV_IP "192.168.1.18"
+      /* diep(), #includes and #defines like in the server */
+     
+       int main(void)
+       {
+         struct sockaddr_in si_other;
+         int s, i, slen=sizeof(si_other);
+         char buf[BUFLEN];
+     
     
-    /*if( connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0) // initialise la connexion
-    {
-       printf("\n Error : Connect Failed \n");
-       return 1;
-    } 
-    */
+        if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP))==-1)
     
-    char* msg = "hello"; 
-    sendto(sockfd, (void*) &msg, sizeof(msg),0, (struct sockaddr *)&serv_addr, sizeof(serv_addr)); //envoie a l'adresse specifiee
-    close(sockfd); //ferme la connexion 
-
-    return 0;
-}
+        memset((char *) &si_other, 0, sizeof(si_other));
+        si_other.sin_family = AF_INET;
+        si_other.sin_port = htons(PORT);
+        if (inet_aton(SRV_IP, &si_other.sin_addr)==0) {
+          fprintf(stderr, "inet_aton() failed\n");
+          exit(1);
+        }
+    
+        for (i=0; i<NPACK; i++) {
+          printf("Sending packet %d\n", i);
+          sprintf(buf, "This is packet %d\n", i);
+          if (sendto(s, buf, BUFLEN, 0, (const struct sockaddr *) &si_other, slen)==-1){}
+        }
+    
+        close(s);
+        return 0;
+      }
