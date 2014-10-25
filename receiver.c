@@ -10,11 +10,10 @@
 
 int main(int argc, char**argv)
 {
-   int sockfd,n;
+   int sockfd;
    struct sockaddr_in servaddr,cliaddr;
    socklen_t len;
-   char mesg[512];
-Packet p;
+   Packet p;
 
    sockfd=socket(AF_INET,SOCK_DGRAM,0);
 
@@ -27,12 +26,14 @@ Packet p;
    for (;;)
    {
       len = sizeof(cliaddr);
-      n = recvfrom(sockfd, &p, sizeof(Packet), 0,(struct sockaddr *)&cliaddr,&len);
-      sendto(sockfd, &(p.payload),512,0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
+      recvfrom(sockfd, (void *)&p, sizeof(Packet), 0,(struct sockaddr *)&cliaddr,&len);
+      sendto(sockfd, (p.payload),512,0,(struct sockaddr *)&cliaddr,sizeof(cliaddr));
       printf("-------------------------------------------------------\n");
-      mesg[n] = 0;
       printf("Received the following:\n");
-      printf("%s",mesg);
+      printf("%s \n",p.payload);
+      printf("Seq num: %d", p.seq_num);
       printf("-------------------------------------------------------\n");
    }
+
+
 }
