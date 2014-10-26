@@ -1,3 +1,9 @@
+ 
+dfhsqhmfds
+dqsjfqjdsfmqfds
+dqnslknvmqs
+fqndkvlsnqmsv
+dsfqnlvnmqn
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <stdio.h>
@@ -17,18 +23,12 @@
 void send_packet(int sockfd, struct sockaddr *dest_addr);
 void recv_ack(int sockfd, struct sockaddr *src_addr);
 void create_packet(char *filename);
-void * call_create_packet(void *arg);
-void * call_send_packet(void *arg);
-void * call_recv_ack(void *arg);
-
-int number_pack = 0;
-int finish = 0;
+Packet* data_packet(int seq, int length, char *payload);
 
 typedef struct {
     int sockfd;
     struct sockaddr *addr;
 } address_t;
-
 
 sem_t empty, full;
 Packet packets_to_send[VALUE]; // array of packets to be send
@@ -94,15 +94,17 @@ int main(int argc, char**argv)
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
     address_t source = {sockfd, (struct sockaddr *)&src_addr};
 
-    pthread_t thread_send, thread_recv, thread_timer, thread_create_packet;
+    pthread_t thread_send, thread_recv, thread_timer, thread_create_packets;
 
-    pthread_create(&thread_create_packet, NULL, (void *)call_create_packet, (void *)&filename);
-    pthread_create(&thread_send, NULL, (void *)call_send_packet, (void *) &destination);
-    pthread_create(&thread_recv, NULL, (void *)call_recv_ack, (void *) &source);
+    pthread_create(thread_create_packets, 0, &create_packet, (void *)  filename);
+    pthread_create(thread_send, 0, &send_packet, (void *) &destination);
+    pthread_create(thread_recv, 0, &recv_ack, (void *) &source);
 
-    pthread_join(thread_create_packet, NULL);
+    pthread_join(thread_create_packets, NULL);
     pthread_join(thread_send, NULL);
     pthread_join(thread_recv, NULL);
+
+
 
    exit(0);
 }
@@ -113,7 +115,7 @@ int main(int argc, char**argv)
 */
 void send_packet(int sockfd, struct sockaddr *dest_addr){
     int n = 0;
-    while(!finish || n < number_pack){
+    while(1){
         sem_wait(&full);
         sendto(sockfd, (const void *)&packets_to_send[n%VALUE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
         n++;
@@ -124,13 +126,11 @@ void send_packet(int sockfd, struct sockaddr *dest_addr){
     TO DO
 */
 void recv_ack(int sockfd, struct sockaddr *src_addr){
-    int n = 0;
-    while(!finish || n < number_pack){
+    while(1){
         Packet ack;
         socklen_t addrlen;
         recvfrom(sockfd, &ack, sizeof(Packet), 0, src_addr, &addrlen);
-        printf("Packet recu : %d \n", ack.seq_num);
-        n++;
+        printf("Packet recu : %s", ack.payload);
         sem_post(&empty);
         /*if (verify_packet(ack) == 1){
             TO DO
@@ -155,25 +155,31 @@ void create_packet(char *filename){
     while((length = read(fd, payload, sizeof(payload))) > 0){
         sem_wait(&empty);
         Packet p = *data_packet(i, length, payload);
+        printf("Packet %d : %s", i, p.payload);
         packets_to_send[i%VALUE] = p;
-        number_pack++;
         i++;
 
         sem_post(&full);
     }
-    finish = 1;
     close(fd);
 }
 
+Packet* data_packet(int seq, int length, char *payload){
+    Packet *pack = malloc(sizeof(Packet));
+    pack->type = 1;
+    pack->window = 0;
+    pack->seq_num = seq;
+    pack->length = length;
+    strcpy(pack->payload, payload);
+    pack->CRC = 0; //TO DO
 
+    return pack;
+}
 
 /* Call the method create_packet
 */
 void * call_create_packet(void *arg){
-    //name *n = (name *) arg;
-    //create_packet(n->name);
-    char * name = (char *) arg;
-    create_packet(name);
+    // TO do
 }
 
 /* Call the method send_packet

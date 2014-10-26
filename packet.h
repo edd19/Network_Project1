@@ -23,3 +23,9 @@ uint16_t get_length(Packet pack);
 //permet de savoir si le packet est le dernier a etre envoye
 int is_last(Packet pack);
 
+Packet* data_packet(int seq, int length, char *payload);
+
+int verify_packet( Packet p);
+
+Packet* ack_packet(int seq_num);
+

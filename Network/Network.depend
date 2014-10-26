@@ -1,0 +1,44 @@
+# depslib dependency file v1.0
+1414329548 source:/home/ndizera/Projects/Network/Network_Project1/packet.c
+	"packet.h"
+	<stdlib.h>
+	<stdio.h>
+	<string.h>
+
+1414330067 /home/ndizera/Projects/Network/Network_Project1/packet.h
+	<stdlib.h>
+	<stdio.h>
+	<errno.h>
+	<string.h>
+	<stdint.h>
+
+1414335501 source:/home/ndizera/Projects/Network/Network_Project1/receiver.c
+	<sys/socket.h>
+	<netinet/in.h>
+	<stdio.h>
+	<string.h>
+	<stdlib.h>
+	"packet.h"
+	<semaphore.h>
+	<sys/types.h>
+	<sys/stat.h>
+	<fcntl.h>
+	<linux/limits.h>
+	<getopt.h>
+	<pthread.h>
+
+1414334836 source:/home/ndizera/Projects/Network/Network_Project1/sender.c
+	<sys/socket.h>
+	<netinet/in.h>
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<unistd.h>
+	<getopt.h>
+	<linux/limits.h>
+	<sys/types.h>
+	<sys/stat.h>
+	<fcntl.h>
+	<semaphore.h>
+	"packet.h"
+
