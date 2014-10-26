@@ -7,6 +7,36 @@
 #include <string.h>
 #include <stdlib.h>
 #include "packet.h"
+#include <semaphore.h>
+
+sem_t empty;
+
+Packet window[31];
+
+void recv_packet(void){
+	while(1) {
+	sem_wait(empty);
+	recvfrom(…);
+
+	}
+}
+
+void add_window(){
+	verify_packet(p); 
+	isInSequence();
+	if(direct process(pack); //send ack;
+	else if (window[i])
+	else drop //send ack; 
+
+}
+
+void process (Packet p)
+{
+	write(p.payload, p.length); 
+	send_ac;
+}
+
+
 
 int main(int argc, char**argv)
 {
