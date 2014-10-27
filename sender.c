@@ -10,9 +10,10 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
+#include <arpa/inet.h>
+#include <pthread.h>
 
 #include "packet.h"
-#define VALUE 31
 
 void send_packet(int sockfd, struct sockaddr *dest_addr);
 void recv_ack(int sockfd, struct sockaddr *src_addr);
@@ -23,6 +24,7 @@ void * call_recv_ack(void *arg);
 
 int number_pack = 0;
 int finish = 0;
+int last_ack = -1;  //last aknowledgement received
 
 typedef struct {
     int sockfd;
@@ -31,7 +33,7 @@ typedef struct {
 
 
 sem_t empty, full;
-Packet packets_to_send[VALUE]; // array of packets to be send
+Packet packets_to_send[WINDOW_SIZE]; // array of packets to be send
 
 int main(int argc, char**argv)
 {
@@ -78,7 +80,7 @@ int main(int argc, char**argv)
     strcpy(hostname, argv[optind]);
     port = atoi(argv[optind+1]);
 
-    sem_init(&empty, 0, VALUE);
+    sem_init(&empty, 0, WINDOW_SIZE);
     sem_init(&full, 0, 0);
 
     int sockfd;
@@ -89,7 +91,7 @@ int main(int argc, char**argv)
     bzero(&dest_addr,sizeof(dest_addr));
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_addr.s_addr=inet_addr(hostname);
-    dest_addr.sin_port=htons(32000);
+    dest_addr.sin_port=htons(port);
 
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
     address_t source = {sockfd, (struct sockaddr *)&src_addr};
@@ -115,7 +117,7 @@ void send_packet(int sockfd, struct sockaddr *dest_addr){
     int n = 0;
     while(!finish || n < number_pack){
         sem_wait(&full);
-        sendto(sockfd, (const void *)&packets_to_send[n%VALUE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
+        sendto(sockfd, (const void *)&packets_to_send[n%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
         n++;
     }
 }
@@ -132,11 +134,9 @@ void recv_ack(int sockfd, struct sockaddr *src_addr){
         printf("Packet recu : %d \n", ack.seq_num);
         n++;
         sem_post(&empty);
-        /*if (verify_packet(ack) == 1){
-            TO DO
-          }
-          else{} // do nothing
-        */
+        if (verify_packet(ack) == 1){ // si le packet est correcte
+            // TO DO if packet out of sequence
+        }
     }
 }
 
@@ -146,7 +146,7 @@ void recv_ack(int sockfd, struct sockaddr *src_addr){
 void create_packet(char *filename){
     int i = 0;
     int length = 0;
-    char payload[512];
+    char payload[PAYLOAD_SIZE];
     int fd = open(filename, O_RDONLY);
     if(fd == -1){
         // Message d'erreur
@@ -155,7 +155,7 @@ void create_packet(char *filename){
     while((length = read(fd, payload, sizeof(payload))) > 0){
         sem_wait(&empty);
         Packet p = *data_packet(i, length, payload);
-        packets_to_send[i%VALUE] = p;
+        packets_to_send[i%WINDOW_SIZE] = p;
         number_pack++;
         i++;
 

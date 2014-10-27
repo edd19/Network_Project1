@@ -12,8 +12,8 @@ Packet* data_packet(int seq, int length, char *payload){
     pack->length = length;
     strcpy(pack->payload, payload);
     pack->CRC = 0; //TO DO
-    if(length < 512){
-        bzero(&(pack->payload[length]), 512 - length);
+    if(length < PAYLOAD_SIZE){
+        bzero(&(pack->payload[length]), PAYLOAD_SIZE - length);
     }
     return pack;
 }
@@ -25,12 +25,12 @@ Packet* ack_packet(int seq_num)
   a->window = 31;
   a->seq_num = seq_num;
   a->length = 0;
-  bzero(a->payload, 512);
+  bzero(a->payload, PAYLOAD_SIZE);
   a->CRC = 0;
 }
 
 int verify_packet( Packet p) {
-  if (p.length > 512)
+  if (p.length > PAYLOAD_SIZE)
     {
       return 0;
     }
