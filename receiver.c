@@ -29,17 +29,19 @@ typedef struct {
 } address_t;
 
 
-sem_t empty;
-sem_t full;
-int expected = 0;
+sem_t empty; //empty is the number of space left in the window
+int seq_expected = 0; // sequence number of the data packet expected by the receiver
+int finish = 0;  // indicates if all the file has been received
 
-char filename[NAME_MAX] = "/dev/stdout";
-Packet window[WINDOW_SIZE];
+char filename[NAME_MAX] = "/dev/stdout";  //name of the file were the data received has to be writed
+Packet window[WINDOW_SIZE];  //the window of the receiver, were the packet out of order are stocked
 
 
 int main(int argc, char**argv)
 {
-    char hostname[NAME_MAX];  // hostname of the receiver
+    window[0].seq_num = -1;
+  
+    char hostname[NAME_MAX];  // hostname of the sender
     int port;  // the port used
 
 
@@ -64,7 +66,6 @@ int main(int argc, char**argv)
     port = atoi(argv[optind+1]);
 
     sem_init(&empty, 0, WINDOW_SIZE);
-    sem_init(&full, 0, 0);
 
 
     int sockfd;
@@ -74,20 +75,25 @@ int main(int argc, char**argv)
 
     bzero(&dest_addr,sizeof(dest_addr));
     dest_addr.sin_family = AF_INET;
-    dest_addr.sin_addr.s_addr=htonl(INADDR_ANY);
+    dest_addr.sin_addr.s_addr=inet_addr(hostname);
     dest_addr.sin_port=htons(port);
     bind(sockfd,(struct sockaddr *)&dest_addr,sizeof(dest_addr));
 
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
-
+  
+    printf("****Waiting for connection****\n");
+    
     pthread_t thread_recv, thread_process;
-
+    
     pthread_create(&thread_recv, NULL, (void *)call_recv_packet, (void *)&destination);
     pthread_create(&thread_process, NULL, (void *)call_process, (void *)&destination);
-
-    pthread_join(thread_recv, NULL);
+    
     pthread_join(thread_process, NULL);
-
+    pthread_cancel(thread_recv);
+    
+    
+    printf("**** File received **** \n");
+    
    exit(0);
 }
 
@@ -98,48 +104,51 @@ void * call_recv_packet(void *arg){
 }
 
 void *call_process(void *arg){
-	address_t *a = (address_t *) arg;
-	process(a->sockfd, a->addr);
+  address_t *a = (address_t *) arg;
+  process(a->sockfd, a->addr);
 }
 
 void recv_packet(int sockfd, struct sockaddr *cli_addr){
 	socklen_t addr_len;
-	while(1) {
-	sem_wait(&empty);
-	Packet p;
-	recvfrom(sockfd, (void *)&p, sizeof(Packet), 0,cli_addr, &addr_len);
-	add_window(p);
+	while(!finish) {
+	  sem_wait(&empty);
+	  Packet p;
+	  recvfrom(sockfd, (void *)&p, sizeof(Packet), 0,cli_addr, &addr_len);
+	  
+	  if(verify_packet(p) == 0 || isInWindow(window, p)){ //if the packet suffer transmission error or has been already received
+	    int left;
+	    sem_getvalue(&empty, &left);
+	    send_ack(ack_packet(seq_expected, left), sockfd, cli_addr);  // we ignore it and send an ack_packet to of the packet expected
+	  }
+	  add_window(p);
 	}
 }
 
 void add_window(Packet p){
-	//verify_packet(p);
-	if(isInWindow(window, p)){
-		//send ack with seq_num of last_ack
-	}
-	else{
-		window[p.seq_num%WINDOW_SIZE] = p;
-		sem_post(&full);
-	}
+  window[p.seq_num%WINDOW_SIZE] = p;
 }
 
 
 void send_ack(Packet *a, int sockfd, struct sockaddr *addr){
-    printf("ack n: %d\n", a->seq_num);
     sendto(sockfd, (void *)a,sizeof(Packet),0,(struct sockaddr *)addr,sizeof(struct sockaddr));
 }
 
 
 
 void process(int sockfd, struct sockaddr *addr){
-	while(1){
-		sem_wait(&full);
-		if(&window[expected] != NULL){
-			write_payload(window[expected]);
-			send_ack(&window[expected], sockfd, addr);
-			//&window[expected] = NULL;
-			expected++;
-			
+	while(!finish){
+		if(window[seq_expected%WINDOW_SIZE].seq_num == seq_expected){
+			write_payload(window[seq_expected]);
+			if(window[(seq_expected+1)%WINDOW_SIZE].seq_num != seq_expected+1){
+			    int left;
+			    sem_getvalue(&empty, &left);
+			    send_ack(ack_packet(seq_expected, left), sockfd, addr);
+			    sem_post(&empty);
+			}
+			if(is_last(window[seq_expected%WINDOW_SIZE])){
+			    finish =1;
+			}
+			seq_expected++;		
 		}
 	}
 }
@@ -147,9 +156,9 @@ void process(int sockfd, struct sockaddr *addr){
 void write_payload(Packet p)
 {
     int fd;
-    fd = open("test.txt", O_APPEND&&O_CREAT, O_WRONLY);
-	write(fd, p.payload, p.length);
-	close(fd);
+    fd = open(filename, O_APPEND&&O_CREAT, O_WRONLY);
+    write(fd, p.payload, p.length);
+    close(fd);
 }
 
 int isInWindow(Packet window[], Packet p)

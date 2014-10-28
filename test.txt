@@ -1,28 +1,28 @@
- 
-dfhsqhmfds
-dqsjfqjdsfmqfds
-dqnslknvmqs
-fqndkvlsnqmsv
-dsfqnlvnmqn
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <getopt.h>
-#include <linux/limits.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <semaphore.h>
+ength, payload);
+        printf("Packet %d : %s", i, p.payload);
+        packets_to_send[i%VALUE] = p;
+        i++;
 
-#include "packet.h"
-#define VALUE 31
+        sem_post(&full);
+    }
+    close(fd);
+}
 
-void send_packet(int sockfd, struct sockaddr *dest_addr);
-void recv_ack(int sockfd, struct sockaddr *src_addr);
-void create_packet(char *filename);
+Packet* data_packet(int seq, int length, char *payload){
+    Packet *pack = malloc(sizeof(Packet));
+    pack->type = 1;
+    pack->window = 0;
+    pack->seq_num = seq;
+    pack->length = length;
+    strcpy(pack->payload, payload);
+    pack->CRC = 0; //TO DO
+
+    return pack;
+}
+
+/* Call the method create_packet
+*/
+void * call_create_packet(void *;
 Packet* data_packet(int seq, int length, char *payload);
 
 typedef struct {

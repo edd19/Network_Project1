@@ -3,7 +3,10 @@
 #include <stdio.h>
 #include <string.h>
 
-
+/*Creates a data packet with sequence number "seq", payload "payload"
+ * and with useful length of the payload equals to "length".
+ * Returns the packet created.
+ */
 Packet* data_packet(int seq, int length, char *payload){
     Packet *pack = malloc(sizeof(Packet));
     pack->type = 1;
@@ -18,19 +21,27 @@ Packet* data_packet(int seq, int length, char *payload){
     return pack;
 }
 
-Packet* ack_packet(int seq_num)
+/*Creates an acknowledgement packet with the next sequence of number 
+ * expected equals to "seq", and window space left equals to "window".
+ * Returns the packet created.
+ */
+Packet* ack_packet(int seq, int window)
 {
   Packet *a = malloc(sizeof(Packet));
   a->type = 2;
-  a->window = 31;
-  a->seq_num = seq_num;
+  a->window = window;
+  a->seq_num = seq;
   a->length = 0;
   bzero(a->payload, PAYLOAD_SIZE);
   a->CRC = 0;
 }
 
+/*Verify il the packet wasn't modified due to transmission errors or
+ * has been correctly created.
+ * Return 0 if the packet isn't good and 1 in the contrary.
+ */
 int verify_packet( Packet p) {
-  if (p.length > PAYLOAD_SIZE)
+  if (p.length > PAYLOAD_SIZE)  //the payload length cannot be greater than "PAYLOAD_SIZE"
     {
       return 0;
     }
@@ -41,43 +52,14 @@ int verify_packet( Packet p) {
   return 1;
 }
 
-//int isInSequence(Packet p, int lastack)
-//{
-//  if(lastack<MAX_SEQ_NUM - 31)
-//    {
-//      if (p.seq_unum - lostack>0)
-//	{
-//	  return 1;
-//	}
-//      else { return 0;}
-//    }
-//  else {
-//    if(lastack<p.seq_num<MAX_SEQ_NUM)
-//      {
-//	return 1;
-//      }
-//    else if(0<=p.seq_num<MAX_lostack)
-//      {
-//	return 1;
-//      }
-//    else {
-//      return 0;
-//    }
-//  }
-//}
 
-
-
-uint16_t get_length(Packet pack)
-{
-  return pack.length;
-}
-
+/*Returns 1 if the packet was the last to be sent. Returns 0 if not.
+ */
 int is_last(Packet pack)
 {
-  if(pack.length < 512)
+  if(pack.length < 512)  //check if the useful payload is inferior at 512
     {
-      return 1; //fin de la liste
+      return 1;
     }
   return 0;
 }

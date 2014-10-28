@@ -11,26 +11,20 @@
 //strucuture definition of a packet
 typedef struct __attribute__((packed)) {
 
-  uint8_t type : 3;
-  uint8_t window : 5;
-  uint8_t seq_num;
-  uint16_t length;
-  char payload[PAYLOAD_SIZE];
+  uint8_t type : 3;  //type definition 1 for data packet, 2 for acknowledgement packet
+  uint8_t window : 5; // size of the window of the receiver, this field is set at 0 for the sender
+  uint8_t seq_num;  // sequence number of the data packet sent by the sender, sequence number of the packet expected for the receiver
+  uint16_t length;  // useful length of the payload
+  char payload[PAYLOAD_SIZE];  // data to be transmitted
   uint32_t CRC;
 } Packet;
 
 
-
-//retourne la taille du packet
-uint16_t get_length(Packet pack);
-
-//permet de savoir si le packet est le dernier a etre envoye
+Packet* data_packet(int seq, int length, char *payload);
+Packet* ack_packet(int seq, int window);
+int verify_packet( Packet p);
 int is_last(Packet pack);
 
-//
-Packet* data_packet(int seq, int length, char *payload);
 
-int verify_packet( Packet p);
 
-Packet* ack_packet(int seq_num);
 

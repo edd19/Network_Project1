@@ -12,8 +12,10 @@
 #include <semaphore.h>
 #include <arpa/inet.h>
 #include <pthread.h>
-
 #include "packet.h"
+//Modifier les includes
+
+
 
 void send_packet(int sockfd, struct sockaddr *dest_addr);
 void recv_ack(int sockfd, struct sockaddr *src_addr);
@@ -22,18 +24,20 @@ void * call_create_packet(void *arg);
 void * call_send_packet(void *arg);
 void * call_recv_ack(void *arg);
 
-int number_pack = 0;
-int finish = 0;
-int last_ack = -1;  //last aknowledgement received
 
+// dans packet.h peut etre
 typedef struct {
     int sockfd;
     struct sockaddr *addr;
 } address_t;
 
 
-sem_t empty, full;
+sem_t empty, full;  //
 Packet packets_to_send[WINDOW_SIZE]; // array of packets to be send
+int number_pack = 0;  // number of packets created
+int finish = 0;  // indicates if the program has finished creating the packets
+int last_ack = -1;  //last aknowledgement received
+
 
 int main(int argc, char**argv)
 {
@@ -91,13 +95,15 @@ int main(int argc, char**argv)
     bzero(&dest_addr,sizeof(dest_addr));
     dest_addr.sin_family = AF_INET;
     dest_addr.sin_addr.s_addr=inet_addr(hostname);
-    dest_addr.sin_port=htons(port);
+    dest_addr.sin_port=htons(3200);
 
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
     address_t source = {sockfd, (struct sockaddr *)&src_addr};
 
+    
+    printf("*** Envoi de fichier ***");
     pthread_t thread_send, thread_recv, thread_timer, thread_create_packet;
-
+    
     pthread_create(&thread_create_packet, NULL, (void *)call_create_packet, (void *)&filename);
     pthread_create(&thread_send, NULL, (void *)call_send_packet, (void *) &destination);
     pthread_create(&thread_recv, NULL, (void *)call_recv_ack, (void *) &source);
@@ -105,6 +111,8 @@ int main(int argc, char**argv)
     pthread_join(thread_create_packet, NULL);
     pthread_join(thread_send, NULL);
     pthread_join(thread_recv, NULL);
+    
+    printf("*** Fichier envoye ***");
 
    exit(0);
 }
@@ -120,6 +128,7 @@ void send_packet(int sockfd, struct sockaddr *dest_addr){
         sendto(sockfd, (const void *)&packets_to_send[n%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
         n++;
     }
+   
 }
 
 /* Receive acknowledgments packets
@@ -131,13 +140,18 @@ void recv_ack(int sockfd, struct sockaddr *src_addr){
         Packet ack;
         socklen_t addrlen;
         recvfrom(sockfd, &ack, sizeof(Packet), 0, src_addr, &addrlen);
-        printf("Packet recu : %d \n", ack.seq_num);
-        n++;
-        sem_post(&empty);
-        if (verify_packet(ack) == 1){ // si le packet est correcte
+	if (verify_packet(ack) == 0){ // if packet is not good
             // TO DO if packet out of sequence
         }
+        int i = n;
+        n = ack.seq_num;
+	
+        for(i; i < n; i++){
+	    sem_post(&empty);
+	}  
+	printf("gogoel\n");
     }
+    
 }
 
 /* Create packets to be send.
