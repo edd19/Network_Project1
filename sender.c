@@ -10,7 +10,8 @@
 #include <sys/stat.h>
 #include <fcntl.h>
 #include <semaphore.h>
-#include <arpa/inet.h>
+#include <netdb.h>
+#include <netinet/in.h>
 #include <pthread.h>
 #include "packet.h"
 //Modifier les includes
@@ -92,15 +93,18 @@ int main(int argc, char**argv)
     sem_init(&full, 0, 0);
 
     int sockfd;
-    struct sockaddr_in dest_addr, src_addr;
+    struct sockaddr_in6 dest_addr, src_addr;
 
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-
+    sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
+  
+    struct hostent *dest = gethostbyname2(hostname,AF_INET6);
+    
     bzero(&dest_addr,sizeof(dest_addr));
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_addr.s_addr=inet_addr(hostname);
-    dest_addr.sin_port=htons(3200);
-
+    dest_addr.sin6_family = AF_INET6;
+    //dest_addr.sin6_addr.s_addr=inet_addr(hostname);
+    dest_addr.sin6_port=htons(port);
+    memmove((char *) &dest_addr.sin6_addr.s6_addr, (char *) dest->h_addr, dest->h_length);
+    
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
     address_t source = {sockfd, (struct sockaddr *)&src_addr};
 
@@ -130,7 +134,7 @@ void send_packet(int sockfd, struct sockaddr *dest_addr){
         sem_wait(&full);
 	sleep(delay / 1000); 
 	if(apply_splr(splr) == 1){
-	  sendto(sockfd, (const void *)&packets_to_send[n_sent%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
+	  sendto(sockfd, (const void *)&packets_to_send[n_sent%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr_in6));
 	}  
 	n_sent++;
 	  
@@ -148,7 +152,7 @@ void recv_ack(int sockfd, struct sockaddr *src_addr){
         recvfrom(sockfd, &ack, sizeof(Packet), 0, src_addr, &addrlen);
 	
 	if (verify_packet(ack) == 0){ // if packet is not good we send the packet having sequence number equals to last_ack
-            sendto(sockfd, (const void *) &packets_to_send[(last_ack)%WINDOW_SIZE], sizeof(Packet), 0, src_addr, sizeof(struct sockaddr));
+            sendto(sockfd, (const void *) &packets_to_send[(last_ack)%WINDOW_SIZE], sizeof(Packet), 0, src_addr, sizeof(struct sockaddr_in6));
 	   
         }
         else{

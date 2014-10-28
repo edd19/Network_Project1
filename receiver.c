@@ -69,14 +69,16 @@ int main(int argc, char**argv)
 
 
     int sockfd;
-    struct sockaddr_in dest_addr;
+    struct sockaddr_in6 dest_addr;
 
-    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
 
     bzero(&dest_addr,sizeof(dest_addr));
-    dest_addr.sin_family = AF_INET;
-    dest_addr.sin_addr.s_addr=inet_addr(hostname);
-    dest_addr.sin_port=htons(port);
+    dest_addr.sin6_family = AF_INET6;
+    //dest_addr.sin6_addr.s_addr=inet_addr(hostname);
+    dest_addr.sin6_port=htons(port);
+    //inet_pton(AF_INET6,hostname, &dest_addr.sin6_addr);
+    inet_pton(hostname, &dest_addr.sin6_addr);
     bind(sockfd,(struct sockaddr *)&dest_addr,sizeof(dest_addr));
 
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
@@ -130,7 +132,7 @@ void add_window(Packet p){
 
 
 void send_ack(Packet *a, int sockfd, struct sockaddr *addr){
-    sendto(sockfd, (void *)a,sizeof(Packet),0,(struct sockaddr *)addr,sizeof(struct sockaddr));
+    sendto(sockfd, (void *)a,sizeof(Packet),0,(struct sockaddr *)addr,sizeof(struct sockaddr_in6));
 }
 
 
