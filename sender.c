@@ -25,26 +25,29 @@ void * call_send_packet(void *arg);
 void * call_recv_ack(void *arg);
 
 
-// dans packet.h peut etre
+// struct definition to be uused for the thread call
 typedef struct {
     int sockfd;
     struct sockaddr *addr;
 } address_t;
 
 
-sem_t empty, full;  //
+sem_t empty, full;  // empty the number of space left in array "packets_to_send", full number of elements in it
 Packet packets_to_send[WINDOW_SIZE]; // array of packets to be send
 int number_pack = 0;  // number of packets created
 int finish = 0;  // indicates if the program has finished creating the packets
-int last_ack = -1;  //last aknowledgement received
+
+int delay = 0;  // delay before transmitting each packet in milliseconds
+int sber = 0;  //byte transmission error ration in per-thousand
+int splr = 0;  // packet loss ratio in percentage
+
+
+
 
 
 int main(int argc, char**argv)
 {
     char filename[NAME_MAX] = "/dev/stdin"; //file to send, by default the standard input
-    int sber = 0;  //byte transmission error ration in per-thousand
-    int splr = 0;  // packet loss ratio in percentage
-    int delay = 0;  // delay before transmitting each packet in milliseconds
     char hostname[NAME_MAX];  // hostname of the receiver
     int port;  // the port used
 
@@ -83,7 +86,8 @@ int main(int argc, char**argv)
 
     strcpy(hostname, argv[optind]);
     port = atoi(argv[optind+1]);
-
+    
+    //Initialisation of semaphore
     sem_init(&empty, 0, WINDOW_SIZE);
     sem_init(&full, 0, 0);
 
@@ -101,7 +105,7 @@ int main(int argc, char**argv)
     address_t source = {sockfd, (struct sockaddr *)&src_addr};
 
     
-    printf("*** Envoi de fichier ***");
+    printf("*** Envoi du fichier : %s ***\n", filename);
     pthread_t thread_send, thread_recv, thread_timer, thread_create_packet;
     
     pthread_create(&thread_create_packet, NULL, (void *)call_create_packet, (void *)&filename);
@@ -112,50 +116,54 @@ int main(int argc, char**argv)
     pthread_join(thread_send, NULL);
     pthread_join(thread_recv, NULL);
     
-    printf("*** Fichier envoye ***");
+    printf("*** Fichier envoye ***\n");
 
    exit(0);
 }
 
 
-/* Send packets
-    TO DO
+/* Send packets contained in the array "packets_to_send" to the receiver.
 */
 void send_packet(int sockfd, struct sockaddr *dest_addr){
-    int n = 0;
-    while(!finish || n < number_pack){
+  int n_sent = 0;  // number of packets sent
+    while(!finish || n_sent < number_pack){  // loop till all packets has been sent
         sem_wait(&full);
-        sendto(sockfd, (const void *)&packets_to_send[n%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
-        n++;
+	sleep(delay / 1000); 
+	if(apply_splr(splr) == 1){
+	  sendto(sockfd, (const void *)&packets_to_send[n_sent%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
+	}  
+	n_sent++;
+	  
     }
    
 }
 
-/* Receive acknowledgments packets
-    TO DO
+/* Receive acknowledgments packets from the receiver.
 */
 void recv_ack(int sockfd, struct sockaddr *src_addr){
-    int n = 0;
-    while(!finish || n < number_pack){
+    int last_ack = 0;  //last aknowledgement received
+    while(!finish || last_ack < number_pack-1){
         Packet ack;
         socklen_t addrlen;
         recvfrom(sockfd, &ack, sizeof(Packet), 0, src_addr, &addrlen);
-	if (verify_packet(ack) == 0){ // if packet is not good
-            // TO DO if packet out of sequence
-        }
-        int i = n;
-        n = ack.seq_num;
 	
-        for(i; i < n; i++){
+	if (verify_packet(ack) == 0){ // if packet is not good we send the packet having sequence number equals to last_ack
+            sendto(sockfd, (const void *) &packets_to_send[(last_ack)%WINDOW_SIZE], sizeof(Packet), 0, src_addr, sizeof(struct sockaddr));
+	   
+        }
+        else{
+	  int i = last_ack;
+	  last_ack = ack.seq_num;
+	
+	  for(i; i < last_ack; i++){ // free space in the array "packets_to_send"
 	    sem_post(&empty);
-	}  
-	printf("gogoel\n");
+	  }  
+	}
     }
     
 }
 
 /* Create packets to be send.
-    TO DO
 */
 void create_packet(char *filename){
     int i = 0;
@@ -166,7 +174,7 @@ void create_packet(char *filename){
         // Message d'erreur
     }
 
-    while((length = read(fd, payload, sizeof(payload))) > 0){
+    while((length = read(fd, payload, sizeof(payload))) > 0){  //loop till all packets has been created
         sem_wait(&empty);
         Packet p = *data_packet(i, length, payload);
         packets_to_send[i%WINDOW_SIZE] = p;
@@ -180,6 +188,27 @@ void create_packet(char *filename){
 }
 
 
+/*Check if the packet can be send with the current splr.
+ * Returns 1 if yes, 0 if no.
+ */
+int apply_splr(int splr){
+    srand(time(NULL));
+    const int MIN = 1;
+    const int MAX = 100;
+    int n = (rand() % (MAX - MIN +1)) + MIN; // produce a random number between 1 and 100
+    if( n <= splr){ // if the random number is inferior to the splr value then it cannot be sent
+     return 0;
+    }
+    
+    return 1;
+}
+
+/*Apply the sber on the packet p.
+ * Returns a modified copy of the packet.
+ */
+Packet * apply_sber(Packet *p, int sber){
+    return p;
+}
 
 /* Call the method create_packet
 */
