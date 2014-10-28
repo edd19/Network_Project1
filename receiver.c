@@ -69,7 +69,7 @@ int main(int argc, char**argv)
 
 
     int sockfd;
-    struct sockaddr_in6 dest_addr;
+    struct sockaddr_in6 dest_addr, cli_addr;
 
     sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
 
@@ -79,9 +79,10 @@ int main(int argc, char**argv)
     dest_addr.sin6_port=htons(port);
     //inet_pton(AF_INET6,hostname, &dest_addr.sin6_addr);
     inet_pton(hostname, &dest_addr.sin6_addr);
-    bind(sockfd,(struct sockaddr *)&dest_addr,sizeof(dest_addr));
+    bind(sockfd,(struct sockaddr *)&dest_addr,sizeof(dest_addr)); 
 
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
+    address_t source = {sockfd, (struct sockaddr *)&cli_addr};
   
     printf("****Waiting for connection****\n");
     
@@ -136,21 +137,22 @@ void send_ack(Packet *a, int sockfd, struct sockaddr *addr){
 }
 
 
-
 void process(int sockfd, struct sockaddr *addr){
 	while(!finish){
 		if(window[seq_expected%WINDOW_SIZE].seq_num == seq_expected){
-			write_payload(window[seq_expected]);
+			write_payload(window[seq_expected%WINDOW_SIZE]);
 			if(window[(seq_expected+1)%WINDOW_SIZE].seq_num != seq_expected+1){
 			    int left;
 			    sem_getvalue(&empty, &left);
-			    send_ack(ack_packet(seq_expected, left), sockfd, addr);
-			    sem_post(&empty);
+			    Packet *ack = ack_packet(seq_expected+1, left);
+			    send_ack(ack, sockfd, addr);
 			}
 			if(is_last(window[seq_expected%WINDOW_SIZE])){
 			    finish =1;
 			}
-			seq_expected++;		
+			sem_post(&empty);
+			seq_expected++;	
+			
 		}
 	}
 }
@@ -158,8 +160,9 @@ void process(int sockfd, struct sockaddr *addr){
 void write_payload(Packet p)
 {
     int fd;
-    fd = open(filename, O_APPEND&&O_CREAT, O_WRONLY);
+    fd = open(filename, O_APPEND | O_CREAT | O_WRONLY, "rw");
     write(fd, p.payload, p.length);
+    //printf("seq_number %d\n", seq_expected);
     close(fd);
 }
 
@@ -168,7 +171,7 @@ int isInWindow(Packet window[], Packet p)
 	int n=0;
 	while(n<WINDOW_SIZE)
 	{
-		if((window[n]).seq_num==p.seq_num)
+		if((window[n%WINDOW_SIZE]).seq_num==p.seq_num)
 		{
 			return 1;
 		}

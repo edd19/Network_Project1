@@ -1,4 +1,5 @@
 #include "packet.h"
+#include "crc32.c"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -33,7 +34,8 @@ Packet* ack_packet(int seq, int window)
   a->seq_num = seq;
   a->length = 0;
   bzero(a->payload, PAYLOAD_SIZE);
-  a->CRC = 0;
+  a->CRC = crc32(0x04C11DB7,a, sizeof(Packet)-4);
+  return a;
 }
 
 /*Verify il the packet wasn't modified due to transmission errors or
@@ -45,10 +47,10 @@ int verify_packet( Packet p) {
     {
       return 0;
     }
-  //if (p.CRC != CRC(packet))
-   // {
-    //  return 0;
-    //}
+  if (p.CRC != crc32(0x04C11DB7,&p, sizeof(Packet)-4))
+  {
+      return 0;
+   }
   return 1;
 }
 
@@ -83,7 +85,7 @@ int apply_splr(int splr){
  * Returns a modified copy of the packet.
  */
 Packet * apply_sber(Packet *p, int sber){
-    Packet *copy = malloc(sizeof(Packet));
+    void *copy = malloc(sizeof(Packet));
     memcpy(copy, p, sizeof(Packet));
   
     srand(time(NULL));
@@ -93,11 +95,11 @@ Packet * apply_sber(Packet *p, int sber){
     int sber_adjust = (sber * sizeof(Packet)) / 1000; // adjust the splr to the size of the packet
     int i = 0;
     
-    for(i = 0; i < sber_adjust; i++){
-      int n = (rand() % (MAX - MIN +1)) + MIN; // produce a random number between 1 and size of the packet
-      memset(copy+n, 0, 1);  // set value 0 to the nth byte
-    }
+     for(i = 0; i < sber_adjust; i++){
+       int n = (rand() % (MAX - MIN +1)) + MIN; // produce a random number between 1 and size of the packet
+       memset(copy+n, 0, 1);  // set value 0 to the nth byte
+     }
     
-    return p;
+    return (Packet *) copy;
 }
 

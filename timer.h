@@ -1,22 +1,33 @@
 #include <sys/time.h>
+#include <stdio.h>
+#include <sys/time.h>
+#include <string.h>
+#include <stdio.h>
+#include <sys/timeb.h>
+#include <stdlib.h>
 
 
-typdef struct{
-  Linked_timer *next;
-  Timer *timer;
-} Linked_timer;
+#define TIMER_TIME 100
 
-typdef struct{
-    int seq_num;  // sequence number of the packet corresponding to the timer
-    struct timeval t;  // time at which the timer expires
-} Timer;
+typedef struct Timer Timer;
+struct Timer {
+ Timer *next;
+  int seq_num;
+  struct timeval time;
+};
 
 
-void add_timer(Timer t, Linked_timer head, Linked_timer tail);
-void remove_timer(Timer t, Linked_timer head, Linked_timer tail);
-void destroy(Linked_timer head, Linked_timer tail);
-Timer look_first(Linked_timer head);
-Timer look_last(Linked_timer tail);
-void remove_n(Linked_timer head, Linked_timer tail, int n);
-int search(Linked_timer head, int seq_num);
+typedef struct {
+  Timer *first;
+  Timer *last;
+  int count;
+} Timer_queue;
 
+
+Timer_queue* Timer_queue_init();
+Timer* Timer_init();
+void add(Timer *newTimer, Timer_queue *queue);
+void dequeue(Timer_queue *queue);
+void destroy(Timer_queue *queue);
+void dequeue_n(Timer_queue *queue, int n);
+int search(Timer_queue *queue, int seq_num);
