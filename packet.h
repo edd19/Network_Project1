@@ -24,7 +24,8 @@ Packet* data_packet(int seq, int length, char *payload);
 Packet* ack_packet(int seq, int window);
 int verify_packet( Packet p);
 int is_last(Packet pack);
-
+int apply_splr(int splr);
+Packet * apply_sber(Packet *p, int sber);
 
 
 

@@ -64,5 +64,40 @@ int is_last(Packet pack)
   return 0;
 }
 
+/*Check if the packet can be send with the current splr.
+ * Returns 1 if yes, 0 if no.
+ */
+int apply_splr(int splr){
+    srand(time(NULL));
+    const int MIN = 1;
+    const int MAX = 100;
+    int n = (rand() % (MAX - MIN +1)) + MIN; // produce a random number between 1 and 100
+    if( n <= splr){ // if the random number is inferior to the splr value then it cannot be sent
+     return 0;
+    }
+    
+    return 1;
+}
 
+/*Apply the sber on the packet p.
+ * Returns a modified copy of the packet.
+ */
+Packet * apply_sber(Packet *p, int sber){
+    Packet *copy = malloc(sizeof(Packet));
+    memcpy(copy, p, sizeof(Packet));
+  
+    srand(time(NULL));
+    const int MIN = 0;
+    const int MAX = sizeof(Packet)-1;
+    
+    int sber_adjust = (sber * sizeof(Packet)) / 1000; // adjust the splr to the size of the packet
+    int i = 0;
+    
+    for(i = 0; i < sber_adjust; i++){
+      int n = (rand() % (MAX - MIN +1)) + MIN; // produce a random number between 1 and size of the packet
+      memset(copy+n, 0, 1);  // set value 0 to the nth byte
+    }
+    
+    return p;
+}
 

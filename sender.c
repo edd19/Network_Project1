@@ -134,7 +134,8 @@ void send_packet(int sockfd, struct sockaddr *dest_addr){
         sem_wait(&full);
 	sleep(delay / 1000); 
 	if(apply_splr(splr) == 1){
-	  sendto(sockfd, (const void *)&packets_to_send[n_sent%WINDOW_SIZE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr_in6));
+	  Packet *p = apply_sber(&packets_to_send[n_sent%WINDOW_SIZE], sber);
+	  sendto(sockfd, (const void *)p, sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr_in6));
 	}  
 	n_sent++;
 	  
@@ -191,28 +192,6 @@ void create_packet(char *filename){
     close(fd);
 }
 
-
-/*Check if the packet can be send with the current splr.
- * Returns 1 if yes, 0 if no.
- */
-int apply_splr(int splr){
-    srand(time(NULL));
-    const int MIN = 1;
-    const int MAX = 100;
-    int n = (rand() % (MAX - MIN +1)) + MIN; // produce a random number between 1 and 100
-    if( n <= splr){ // if the random number is inferior to the splr value then it cannot be sent
-     return 0;
-    }
-    
-    return 1;
-}
-
-/*Apply the sber on the packet p.
- * Returns a modified copy of the packet.
- */
-Packet * apply_sber(Packet *p, int sber){
-    return p;
-}
 
 /* Call the method create_packet
 */
