@@ -162,7 +162,6 @@ void write_payload(Packet p)
     int fd;
     fd = open(filename, O_APPEND | O_CREAT | O_WRONLY, "rw");
     write(fd, p.payload, p.length);
-    //printf("seq_number %d\n", seq_expected);
     close(fd);
 }
 
