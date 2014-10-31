@@ -128,6 +128,11 @@ int main(int argc, char**argv)
     pthread_join(thread_send, NULL);
     pthread_join(thread_recv, NULL);
     pthread_cancel(thread_timer);
+    
+    sem_destroy(&empty);
+    sem_destroy(&full);
+    destroy(list_timer);
+    
     printf("*** Fichier envoye ***\n");
 
    exit(0);
@@ -144,6 +149,7 @@ void send_packet(int sockfd, struct sockaddr *dest_addr){
 	if(apply_splr(splr) == 1){  // simulate loss of packet, if it's 0 we don't send the packet
 	  Packet *p = apply_sber(&packets_to_send[n_sent%WINDOW_SIZE], sber);  //apply the sber on the current packet
 	  sendto(sockfd, (const void *)p, sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr_in6));
+	  free(p);
 	}
 	  //creation of timer
 	  Timer *t = Timer_init();
@@ -183,6 +189,7 @@ void recv_ack(int sockfd, struct sockaddr *src_addr){
 	  last_ack = ack.seq_num; 
 	
 	  for(i; i < last_ack; i++){ // free space in the array "packets_to_send"
+	    free(&packets_to_send[i%WINDOW_SIZE]);
 	    sem_post(&empty);
 	    dequeue(list_timer);
 	  }  
@@ -234,6 +241,7 @@ void check_timer(int sockfd, struct sockaddr *addr){
 	    t->seq_num = packets_to_send[last_ack%WINDOW_SIZE].seq_num;
 	    gettimeofday(&(t->time), NULL);
 	    (t->time).tv_usec = (t->time).tv_usec + TIMER_TIME*1000;
+	    dequeue(list_timer);
 	    add(t, list_timer);
 	  
 	}

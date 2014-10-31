@@ -92,6 +92,8 @@ int main(int argc, char**argv)
     pthread_join(thread_process, NULL);
     pthread_cancel(thread_recv);
     
+    sem_destroy(&empty);
+    
     
     printf("**** File received **** \n");
     
@@ -119,7 +121,9 @@ void recv_packet(int sockfd, struct sockaddr *cli_addr){
 	  if(verify_packet(p) == 0 || isInWindow(window, p)){ //if the packet suffer transmission error or has been already received
 	    int left;
 	    sem_getvalue(&empty, &left);
-	    send_ack(ack_packet(seq_expected, left), sockfd, cli_addr);  // we ignore it and send an ack_packet to of the packet expected
+	    Packet *a = ack_packet(seq_expected, left);
+	    send_ack(a, sockfd, cli_addr);  // we ignore it and send an ack_packet to of the packet expected
+	    free(a);
 	  }
 	  add_window(p);
 	}
@@ -144,6 +148,7 @@ void process(int sockfd, struct sockaddr *addr){
 			    sem_getvalue(&empty, &left);
 			    Packet *ack = ack_packet(seq_expected+1, left);
 			    send_ack(ack, sockfd, addr);
+			    free(ack);
 			}
 			if(is_last(window[seq_expected%WINDOW_SIZE])){
 			    finish =1;

@@ -30,7 +30,6 @@ void add(Timer *newTimer, Timer_queue *queue) //ajoute newtimer a la fin de la q
 void dequeue(Timer_queue *queue)//retire le premier element de la queue
 {
   if(queue->count != 0){
-    // free first  d'abord
     free(queue->first);
     queue->first=queue->first->next;
     queue->count = queue->count - 1;
@@ -40,8 +39,6 @@ void dequeue(Timer_queue *queue)//retire le premier element de la queue
  void destroy(Timer_queue *queue)//on ignore pour l'instant
 {
   int n=queue->count;
-  //Timer *tbd = queue->first;  // timer to be deleted
-  //Timer *current = queue->first->next;
 
       while(n!=0)
 	{
