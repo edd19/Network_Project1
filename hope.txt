@@ -1,0 +1,184 @@
+ength, payload);
+        printf("Packet %d : %s", i, p.payload);
+        packets_to_send[i%VALUE] = p;
+        i++;
+
+        sem_post(&full);
+    }
+    close(fd);
+}
+
+Packet* data_packet(int seq, int length, char *payload){
+    Packet *pack = malloc(sizeof(Packet));
+    pack->type = 1;
+    pack->window = 0;
+    pack->seq_num = seq;
+    pack->length = length;
+    strcpy(pack->payload, payload);
+    pack->CRC = 0; //TO DO
+
+    return pack;
+}
+
+/* Call the method create_packet
+*/
+void * call_create_packet(void *;
+Packet* data_packet(int seq, int length, char *payload);
+
+typedef struct {
+    int sockfd;
+    struct sockaddr *addr;
+} address_t;
+
+sem_t empty, full;
+Packet packets_to_send[VALUE]; // array of packets to be send
+
+int main(int argc, char**argv)
+{
+    char filename[NAME_MAX] = "/dev/stdin"; //file to send, by default the standard input
+    int sber = 0;  //byte transmission error ration in per-thousand
+    int splr = 0;  // packet loss ratio in percentage
+    int delay = 0;  // delay before transmitting each packet in milliseconds
+    char hostname[NAME_MAX];  // hostname of the receiver
+    int port;  // the port used
+
+
+    int option = 0;
+    static struct option options[] = {
+                                        {"file", required_argument, 0, 'f'},
+                                        {"sber", required_argument, 0, 'b'},
+                                        {"splr", required_argument, 0, 'p'},
+                                        {"delay", required_argument, 0, 'd'}
+                                     };
+
+    while((option = getopt_long(argc, argv, "b:d:f:p:", options, NULL)) != -1){
+        switch(option){
+            case 'b':
+                sber = atoi(optarg);
+                break;
+
+            case 'd':
+                delay = atoi(optarg);
+                break;
+
+            case 'f':
+                strcpy(filename ,optarg);
+                break;
+
+            case 'p':
+                splr = atoi(optarg);
+                break;
+
+            case '?':
+
+                break;
+        }
+    }
+
+    strcpy(hostname, argv[optind]);
+    port = atoi(argv[optind+1]);
+
+    sem_init(&empty, 0, VALUE);
+    sem_init(&full, 0, 0);
+
+    int sockfd;
+    struct sockaddr_in dest_addr, src_addr;
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+
+    bzero(&dest_addr,sizeof(dest_addr));
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_addr.s_addr=inet_addr(hostname);
+    dest_addr.sin_port=htons(32000);
+
+    address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
+    address_t source = {sockfd, (struct sockaddr *)&src_addr};
+
+    pthread_t thread_send, thread_recv, thread_timer, thread_create_packets;
+
+    pthread_create(thread_create_packets, 0, &create_packet, (void *)  filename);
+    pthread_create(thread_send, 0, &send_packet, (void *) &destination);
+    pthread_create(thread_recv, 0, &recv_ack, (void *) &source);
+
+    pthread_join(thread_create_packets, NULL);
+    pthread_join(thread_send, NULL);
+    pthread_join(thread_recv, NULL);
+
+
+
+   exit(0);
+}
+
+
+/* Send packets
+    TO DO
+*/
+void send_packet(int sockfd, struct sockaddr *dest_addr){
+    int n = 0;
+    while(1){
+        sem_wait(&full);
+        sendto(sockfd, (const void *)&packets_to_send[n%VALUE], sizeof(Packet), 0, dest_addr, sizeof(struct sockaddr));
+        n++;
+    }
+}
+
+/* Receive acknowledgments packets
+    TO DO
+*/
+void recv_ack(int sockfd, struct sockaddr *src_addr){
+    while(1){
+        Packet ack;
+        socklen_t addrlen;
+        recvfrom(sockfd, &ack, sizeof(Packet), 0, src_addr, &addrlen);
+        printf("Packet recu : %s", acength, payload);
+        printf("Packet %d : %s", i, p.payload);
+        packets_to_send[i%VALUE] = p;
+        i++;
+
+        sem_post(&full);
+    }
+    close(fd);
+}
+
+Packet* data_packet(int seq, int length, char *payload){
+    Packet *pack = malloc(sizeof(Packet));
+    pack->type = 1;
+    pack->window = 0;
+    pack->seq_num = seq;
+    pack->length = length;
+    strcpy(pack->payload, payload);
+    pack->CRC = 0; //TO DO
+
+    return pack;
+}
+
+/* Call the method create_packet
+*/
+void * call_create_packet(void *;
+Packet* data_packet(int seq, int length, char *payload);
+
+typedef struct {
+    int sockfd;
+    struct sockaddr *addr;
+} address_t;
+
+sem_t empty, full;
+Packet packets_to_send[VALUE]; // array of packets to be send
+
+int main(int argc, char**argv)
+{
+    char filename[NAME_MAX] = "/dev/stdin"; //file to send, by default the standard input
+    int sber = 0;  //byte transmission error ration in per-thousand
+    int splr = 0;  // packet loss ratio in percentage
+    int delay = 0;  // delay before transmitting each packet in milliseconds
+    char hostname[NAME_MAX];  // hostname of the receiver
+    int port;  // the port used
+
+
+    int option = 0;
+    static struct option options[] = {
+                                        {"file", required_argument, 0, 'f'},
+                                        {"sber", required_argument, 0, 'b'},
+                                        {"splr", required_argument, 0, 'p'},
+                                        {"delay", required_argument, 0, 'd'}
+                           

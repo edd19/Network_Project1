@@ -98,7 +98,7 @@ int main(int argc, char**argv)
     sem_init(&full, 0, 0);
 
     int sockfd;
-    struct sockaddr_in6 dest_addr;
+    struct sockaddr_in6 dest_addr, src_addr;
 
     sockfd = socket(AF_INET6, SOCK_DGRAM, 0);
   
@@ -111,6 +111,7 @@ int main(int argc, char**argv)
     memmove((char *) &dest_addr.sin6_addr.s6_addr, (char *) dest->h_addr, dest->h_length);
     
     address_t destination = {sockfd, (struct sockaddr *)&dest_addr};
+    address_t source = {sockfd, (struct sockaddr *)&src_addr};
    
 
     list_timer = Timer_queue_init();
@@ -120,7 +121,7 @@ int main(int argc, char**argv)
     
     pthread_create(&thread_create_packet, NULL, (void *)call_create_packet, (void *)&filename);
     pthread_create(&thread_send, NULL, (void *)call_send_packet, (void *) &destination);
-    pthread_create(&thread_recv, NULL, (void *)call_recv_ack, (void *) &destination);
+    pthread_create(&thread_recv, NULL, (void *)call_recv_ack, (void *) &source);
     pthread_create(&thread_timer, NULL, (void *)call_timer, (void *) &destination);
 
     pthread_join(thread_create_packet, NULL);

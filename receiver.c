@@ -75,9 +75,7 @@ int main(int argc, char**argv)
 
     bzero(&dest_addr,sizeof(dest_addr));
     dest_addr.sin6_family = AF_INET6;
-    //dest_addr.sin6_addr.s_addr=inet_addr(hostname);
     dest_addr.sin6_port=htons(port);
-    //inet_pton(AF_INET6,hostname, &dest_addr.sin6_addr);
     inet_pton(hostname, &dest_addr.sin6_addr);
     bind(sockfd,(struct sockaddr *)&dest_addr,sizeof(dest_addr)); 
 
@@ -160,7 +158,7 @@ void process(int sockfd, struct sockaddr *addr){
 void write_payload(Packet p)
 {
     int fd;
-    fd = open(filename, O_APPEND | O_CREAT | O_WRONLY, "rw");
+    fd = open(filename, O_APPEND | O_CREAT | O_WRONLY, 0755);
     write(fd, p.payload, p.length);
     close(fd);
 }
